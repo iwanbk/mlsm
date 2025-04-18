@@ -24,7 +24,7 @@ func (m *MemTable) Put(key, value []byte) error {
 func (m *MemTable) Get(key []byte) ([]byte, bool) {
 	// Get the value for the key from the skiplist
 	v, ok := m.kv.GetValue(key)
-	if !ok {
+	if !ok || v == nil {
 		return nil, false
 	}
 	return v.([]byte), true
