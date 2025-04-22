@@ -11,7 +11,7 @@ type LsmStorage struct {
 	memtable *MemTable
 
 	// immutable memtables
-	// from latest to earliest
+	// from earliest to latest
 	immMemtables []*MemTable
 
 	opt *LsmStorageOption
@@ -55,7 +55,22 @@ func (l *LsmStorage) Put(key, value []byte) error {
 func (l *LsmStorage) Get(key []byte) ([]byte, bool) {
 	l.mtLock.RLock()
 	defer l.mtLock.RUnlock()
-	return l.memtable.Get(key)
+
+	// first check the current memtable
+	if v, ok := l.memtable.Get(key); ok {
+		return v, true
+	}
+
+	// then check the immutable memtables
+	// TODO: use separate lock for immMemtables
+	// to avoid lock contention
+	for i := len(l.immMemtables) - 1; i >= 0; i-- {
+		if v, ok := l.immMemtables[i].Get(key); ok {
+			return v, true
+		}
+	}
+	// if not found, return nil
+	return nil, false
 }
 
 // Delete the key-value pair from the memtable
